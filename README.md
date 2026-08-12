@@ -172,16 +172,14 @@ Outbase只接受FIT格式。行者GPX经打包进assets的Outbase官方`gpx2fit.
 
 ## 🙏 鸣谢
 
-感谢以下平台提供的服务：
+感谢以下平台为热爱运动的用户提供的数据记录与存储服务：
 
 - **[iGPSPORT](https://www.igpsport.com/)** — 专业骑行数据平台
 - **[行者](https://www.imxingzhe.com/)** — 运动记录与社区平台
 - **[迈金/顽鹿OTM](https://www.magene.com/)** — 智能骑行设备与数据平台
 - **[Outbase](https://outbase.cn/)** — 运动数据聚合平台
 
-特别感谢：
-- Outbase 官方提供的 GPX→FIT 转换库 (`gpx2fit.js`)
-- 各平台开放的API接口
+感谢以下骑友(均为骑行爱称)为软件测试提供的帮助：素甲粉、青岛AUV阿哲、清茶、萧、洪斌大哥、鸽子王腰果、rockozhao、胶州一哥大沽河河长赵铁柱、海参
 
 ---
 
@@ -192,3 +190,4 @@ Outbase只接受FIT格式。行者GPX经打包进assets的Outbase官方`gpx2fit.
 ---
 
 **鸡翅幸哲迈进OB** — 让运动数据自由流动 🚴‍♂️
+
