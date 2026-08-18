@@ -5,7 +5,7 @@
 [![Android](https://img.shields.io/badge/Platform-Android-green)](https://developer.android.com)
 [![Kotlin](https://img.shields.io/badge/Language-Kotlin-blue)](https://kotlinlang.org)
 [![License](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-v6.0.9-brightgreen)]()
+[![Version](https://img.shields.io/badge/Version-v6.1.0-brightgreen)]()
 
 一款 Android 数据迁移工具，将骑行/跑步等运动记录从三个国内平台批量同步到 Outbase 平台。
 
@@ -30,6 +30,11 @@
 - 📤 **多策略上传** — Outbase CDN h5端点 + WebView回退通道
 - 📋 **详细日志** — 全过程记录，一键复制，失败原因分类
 - 🎯 **单平台/全部来源选择** — 灵活控制同步范围
+- 🧭 **迈金 GCJ-02→WGS84 坐标转换** — 基于开源验证方案，fit_content通道自动修正坐标偏移
+- 💾 **数据来源记忆** — 重启APP自动恢复上次选择的来源
+- 📂 **文件本地存储** — 同步文件自动保存至手机 Download/鸡翅幸哲迈进OB/ 目录
+- 🔄 **同步记忆** — 已同步记录不再重复下载，跳过上限提升至10000条
+- ⏰ **后台自动同步** — 可配置检测间隔（30秒~1小时），附后台保活指引
 
 ---
 
@@ -54,18 +59,21 @@ app/
     ├── AndroidManifest.xml
     ├── assets/
     │   ├── bridge.html           # WebView桥页面（GPX转FIT+上传回退）
-    │   └── gpx2fit.js            # Outbase官方GPX→FIT转换库
+    │   ├── gpx2fit.js            # Outbase官方GPX→FIT转换库
+    │   └── magene_fix.js         # 迈金GCJ-02→WGS84坐标修正（WebView内执行）
     ├── java/com/jichi/ob/
     │   ├── MainActivity.kt       # 主界面+同步调度
+    │   ├── SyncEngine.kt         # 同步引擎核心逻辑
+    │   ├── AutoSyncService.kt    # 后台自动同步服务
     │   ├── api/
     │   │   ├── IgpsportApi.kt    # iGPSPORT接口
     │   │   ├── XingzheApi.kt     # 行者接口
-    │   │   ├── MageneApi.kt      # 迈金OTM接口
+    │   │   ├── MageneApi.kt      # 迈金OTM接口（含通道标识）
     │   │   └── OutbaseApi.kt     # Outbase上传
     │   ├── model/Activity.kt     # 数据模型
     │   ├── ui/LoginWebActivity.kt# 四平台WebView登录
     │   └── util/
-    │       ├── PrefsManager.kt   # 凭证存储
+    │       ├── PrefsManager.kt   # 凭证存储+同步记忆
     │       └── WebBridge.kt      # WebView桥管理
     └── res/                      # 布局、配色、字符串、图标
 ```
@@ -84,8 +92,8 @@ app/
 
 ```bash
 # 1. 克隆仓库
-git clone https://github.com/Anathleticbicyclist/chibixingzhe-jinmaiOB-v6.0.9-dev-docs.git
-cd chibixingzhe-jinmaiOB-v6.0.9-dev-docs
+git clone https://github.com/Anathleticbicyclist/sync-igpsport-magene-onelap-xingzhe-data-to-outbase.git
+cd sync-igpsport-magene-onelap-xingzhe-data-to-outbase
 
 # 2. 生成签名密钥（首次需要）
 keytool -genkey -v -keystore jichi-ob-release.keystore \
@@ -114,9 +122,10 @@ keytool -genkey -v -keystore jichi-ob-release.keystore \
 1. **安装APK** 到 Android 设备
 2. **登录各平台** — 点击对应平台的登录按钮，在WebView中完成登录
 3. **设置同步数量** — 滑块选择1~1000条
-4. **选择来源** — 单平台或全部来源
+4. **选择来源** — 单平台或全部来源（选择会被记忆，下次自动恢复）
 5. **开始同步** — 点击"开始同步到Outbase"
 6. **查看日志** — 实时显示同步进度和结果
+7. **后台自动同步**（可选）— 在设置中开启，配置检测间隔，按指引设置后台保活
 
 ---
 
@@ -130,6 +139,14 @@ Outbase只接受FIT格式。行者GPX经打包进assets的Outbase官方`gpx2fit.
 - `gpx2fitEncoder` 是异步函数（返回Promise），桥接代码必须 `Promise.resolve().then()` 处理
 - Android WebView自带DOMParser，该库浏览器分支可直接运行
 - GPX为UTC时间，转换前对所有`<time>`标签+8小时，使Outbase展示为北京时间
+
+### 迈金 GCJ-02→WGS84 坐标修正
+
+迈金fit_content接口返回的FIT文件使用GCJ-02坐标系（国测局坐标），与WGS84存在约450米偏移。修正方案基于开源项目 [magene-fit-strava-fix](https://github.com/dwmer0308-a11y/magene-fit-strava-fix) 的验证算法，打包在 `assets/magene_fix.js`，WebView内执行。
+
+- **七牛直链下载**：已是WGS84坐标，无需转换
+- **fit_content接口下载**：自动执行GCJ-02→WGS84转换
+- 转换开关在同步设置中，默认关闭
 
 ### Outbase 上传（h5端点 + 回退）
 
@@ -164,6 +181,26 @@ Outbase只接受FIT格式。行者GPX经打包进assets的Outbase官方`gpx2fit.
 
 ---
 
+## 📋 更新日志
+
+### v6.1.0 (2026-08-18)
+
+1. **数据来源记忆** — 重启APP自动恢复上次选择的数据来源
+2. **文件本地存储** — 同步文件自动保存至手机 `Download/鸡翅幸哲迈进OB/` 目录，设置卡片显示路径
+3. **迈金坐标转换** — 新增 GCJ-02→WGS84 坐标转换开关（基于 [magene-fit-strava-fix](https://github.com/dwmer0308-a11y/magene-fit-strava-fix) 开源验证方案移植），七牛直链不动、fit_content通道自动转换
+4. **同步记忆** — 已同步记录本地记账，再同步直接跳过不重复下载；跳过上限 3000→10000
+5. **后台自动同步** — 新增自动同步卡片（开关+检测间隔滑块30秒~1小时+后台常驻指引），含电池优化白名单申请、各品牌自启动设置路径，运行时通知栏常驻通知显示最近检测结果
+
+### v6.0.9
+
+- 初始开源版本
+- 四平台WebView登录+批量同步
+- GPX→FIT本地转换（行者专用）
+- 迈金双通道下载（七牛直链+fit_content）
+- Outbase多策略上传（CDN h5 + WebView回退）
+
+---
+
 ## 📄 许可证
 
 本项目采用 [MIT License](LICENSE) 开源。
@@ -181,6 +218,8 @@ Outbase只接受FIT格式。行者GPX经打包进assets的Outbase官方`gpx2fit.
 
 感谢以下骑友(均为骑行爱称)为软件测试提供的帮助：素甲粉、青岛AUV阿哲、清茶、萧、洪斌大哥、鸽子王腰果、rockozhao、胶州一哥大沽河河长赵铁柱、海参
 
+感谢开源项目 [magene-fit-strava-fix](https://github.com/dwmer0308-a11y/magene-fit-strava-fix) 提供的迈金坐标修正算法参考。
+
 ---
 
 ## 📞 联系方式
@@ -189,5 +228,4 @@ Outbase只接受FIT格式。行者GPX经打包进assets的Outbase官方`gpx2fit.
 
 ---
 
-**鸡翅幸哲迈进OB** — 让运动数据自由流动 🚴‍♂️
-
+**鸡翅幸哲迈进OB** — 让运动数据自由流动 🚴♂️
